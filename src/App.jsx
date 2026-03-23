@@ -1,85 +1,96 @@
-import { useState, useCallback } from 'react'
-import CollectForm from './components/CollectForm.jsx'
-import PublishView from './components/PublishView.jsx'
+import { useState } from 'react'
+import { platforms } from './data/platforms'
+import ContentPane from './components/ContentPane'
+import './App.css'
 
-const initialVideoData = {
+const INITIAL_FORM = {
   title: '',
   description: '',
-  hashtags: [],
   videoFile: null,
-  videoPreviewUrl: null,
   thumbnailFile: null,
-  thumbnailPreviewUrl: null,
+  hashtags: [],          // global (ALL view)
+  platformHashtags: {},  // { [platformId]: string[] } — seeded on first visit
 }
 
 export default function App() {
-  const [videoData, setVideoData] = useState(initialVideoData)
-  const [mode, setMode] = useState('collect')
-  const [selectedPlatform, setSelectedPlatform] = useState(null)
+  const [formData, setFormData] = useState(INITIAL_FORM)
+  const [selectedPlatform, setSelectedPlatform] = useState(null) // null = ALL
+  const [isLocked, setIsLocked] = useState(false)
 
-  const updateVideoData = useCallback((updates) => {
-    setVideoData((prev) => ({ ...prev, ...updates }))
-  }, [])
-
-  const handleModeSwitch = (newMode) => {
-    setMode(newMode)
-    if (newMode === 'collect') {
-      setSelectedPlatform(null)
+  const handleSelectPlatform = (platformId) => {
+    setSelectedPlatform(platformId)
+    // Seed with suggested hashtags on first visit to a platform
+    if (platformId && formData.platformHashtags[platformId] === undefined) {
+      const platform = platforms.find(p => p.id === platformId)
+      const suggested = platform?.suggestedHashtags || []
+      setFormData(prev => ({
+        ...prev,
+        platformHashtags: {
+          ...prev.platformHashtags,
+          [platformId]: [...suggested],
+        },
+      }))
     }
   }
 
-  const hasContent =
-    videoData.title ||
-    videoData.description ||
-    videoData.hashtags.length > 0 ||
-    videoData.videoFile
+  const currentPlatform = selectedPlatform
+    ? platforms.find(p => p.id === selectedPlatform) ?? null
+    : null
 
   return (
-    <div className="app">
-      <header className="header">
-        <div className="header-brand">
-          <span className="header-icon">🎬</span>
-          <div>
-            <h1 className="header-title">Mise en Uploader</h1>
-            <p className="header-subtitle">Podcast video upload helper</p>
-          </div>
+    <div className="app-shell">
+      {/* ── Left: Platform Nav ── */}
+      <nav className="platform-nav">
+        <div className="nav-logo">
+          <span className="nav-logo-title">mise en</span>
+          <span className="nav-logo-sub">uploader</span>
         </div>
-        <nav className="mode-toggle">
-          <button
-            className={`mode-btn ${mode === 'collect' ? 'mode-btn--active' : ''}`}
-            onClick={() => handleModeSwitch('collect')}
-          >
-            <span className="mode-btn-icon">📝</span>
-            Collect
-          </button>
-          <button
-            className={`mode-btn ${mode === 'publish' ? 'mode-btn--active' : ''}`}
-            onClick={() => handleModeSwitch('publish')}
-          >
-            <span className="mode-btn-icon">🚀</span>
-            Publish
-            {!hasContent && mode !== 'publish' && (
-              <span className="mode-btn-badge">Fill in data first</span>
-            )}
-          </button>
-        </nav>
-      </header>
 
-      <main className="main-content">
-        {mode === 'collect' ? (
-          <CollectForm videoData={videoData} onChange={updateVideoData} />
-        ) : (
-          <PublishView
-            videoData={videoData}
-            selectedPlatform={selectedPlatform}
-            onSelectPlatform={setSelectedPlatform}
-          />
-        )}
+        <button
+          className={`nav-btn nav-all${!selectedPlatform ? ' nav-active' : ''}`}
+          onClick={() => handleSelectPlatform(null)}
+        >
+          ALL
+        </button>
+
+        <div className="nav-divider" />
+
+        {platforms.map(p => (
+          <button
+            key={p.id}
+            className={`nav-btn nav-platform${selectedPlatform === p.id ? ' nav-active' : ''}`}
+            style={{ '--pc': p.color }}
+            onClick={() => handleSelectPlatform(p.id)}
+          >
+            <span className="nav-emoji">{p.emoji}</span>
+            <span>{p.shortName}</span>
+          </button>
+        ))}
+
+        <div className="nav-spacer" />
+
+        <div className="nav-footer">
+          {isLocked ? (
+            <button className="nav-edit-btn" onClick={() => setIsLocked(false)}>
+              ✏️ Edit
+            </button>
+          ) : (
+            <span className="nav-status-text">editing</span>
+          )}
+        </div>
+      </nav>
+
+      {/* ── Right: Content ── */}
+      <main className="content-area">
+        <ContentPane
+          formData={formData}
+          onChange={setFormData}
+          currentPlatform={currentPlatform}
+          isLocked={isLocked}
+          onLock={() => setIsLocked(true)}
+          onUnlock={() => setIsLocked(false)}
+        />
       </main>
-
-      <footer className="footer">
-        <p>Mise en Uploader &mdash; upload once, publish everywhere</p>
-      </footer>
     </div>
   )
 }
