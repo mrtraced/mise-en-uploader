@@ -58,8 +58,7 @@ export default function App() {
       {/* ── Left Nav ── */}
       <nav className="platform-nav">
         <div className="nav-logo">
-          <span className="nav-logo-mise">Mise En</span>
-          <span className="nav-logo-uploader">Uploader</span>
+          <span className="nav-logo-mise">MISE EN </span><span className="nav-logo-uploader">Uploader</span>
         </div>
 
         {!isLocked && (
