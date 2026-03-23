@@ -1,5 +1,4 @@
-import { useState, useRef } from 'react'
-import CopyField from './CopyField'
+import { useState, useRef, useMemo } from 'react'
 
 function formatBytes(bytes) {
   if (!bytes) return ''
@@ -8,7 +7,53 @@ function formatBytes(bytes) {
   return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
 }
 
-function PlatformHeader({ platform, onUnlock, showHashtagNote }) {
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text)
+  } catch {
+    const el = document.createElement('textarea')
+    el.value = text
+    el.style.cssText = 'position:fixed;opacity:0'
+    document.body.appendChild(el)
+    el.select()
+    document.execCommand('copy')
+    document.body.removeChild(el)
+  }
+}
+
+function Confetti() {
+  const pieces = useMemo(() => {
+    const colors = ['#6B5CF6', '#F59E0B', '#10B981', '#EF4444', '#3B82F6', '#EC4899', '#F97316', '#8B5CF6']
+    return Array.from({ length: 60 }, (_, i) => ({
+      id: i,
+      left: `${(i * 1.63 + 1) % 97}%`,
+      color: colors[i % colors.length],
+      delay: `${((i * 0.033) % 0.65).toFixed(3)}s`,
+      duration: `${(0.85 + (i % 8) * 0.1).toFixed(2)}s`,
+      w: 6 + (i % 5) * 2,
+      h: 7 + (i % 4) * 3,
+      radius: i % 3 === 0 ? '50%' : '3px',
+    }))
+  }, [])
+
+  return (
+    <div className="confetti-container" aria-hidden="true">
+      {pieces.map(p => (
+        <div key={p.id} className="confetti-piece" style={{
+          left: p.left,
+          background: p.color,
+          animationDelay: p.delay,
+          animationDuration: p.duration,
+          width: p.w,
+          height: p.h,
+          borderRadius: p.radius,
+        }} />
+      ))}
+    </div>
+  )
+}
+
+function PlatformHeader({ platform }) {
   return (
     <div className="pane-header">
       <span className="ph-emoji">{platform.emoji}</span>
@@ -18,26 +63,23 @@ function PlatformHeader({ platform, onUnlock, showHashtagNote }) {
         {platform.limits.aspectRatio && <span className="limit-chip">{platform.limits.aspectRatio}</span>}
         {platform.limits.fileSize && <span className="limit-chip">≤ {platform.limits.fileSize}</span>}
       </div>
-      {showHashtagNote && platform.suggestedHashtags?.length > 0 && (
-        <span className="ph-hashtag-note">hashtags pre-filled with best practices</span>
-      )}
-      {onUnlock && (
-        <button className="btn-edit-sm" onClick={onUnlock}>✏️ Edit</button>
-      )}
     </div>
   )
 }
 
-export default function ContentPane({ formData, onChange, currentPlatform, isLocked, onLock, onUnlock }) {
+export default function ContentPane({
+  formData, onChange, currentPlatform, isLocked,
+  completedPlatforms = {}, onPlatformComplete,
+}) {
   const [hashtagInput, setHashtagInput] = useState('')
   const [dragOver, setDragOver] = useState(null)
+  const [copiedField, setCopiedField] = useState(null)
+  const [showConfetti, setShowConfetti] = useState(false)
   const videoInputRef = useRef(null)
   const thumbInputRef = useRef(null)
 
-  const showField = (field) => {
-    if (!currentPlatform) return true
-    return currentPlatform.fields.includes(field)
-  }
+  // ── helpers ──────────────────────────────────────────────────────
+  const showField = (field) => !currentPlatform || currentPlatform.fields.includes(field)
 
   const fieldLabel = (field) => {
     if (currentPlatform?.fieldLabels?.[field]) return currentPlatform.fieldLabels[field]
@@ -68,8 +110,7 @@ export default function ContentPane({ formData, onChange, currentPlatform, isLoc
 
   const handleHashtagKey = (e) => {
     if ((e.key === 'Enter' || e.key === ',') && hashtagInput.trim()) {
-      e.preventDefault()
-      addHashtag(hashtagInput)
+      e.preventDefault(); addHashtag(hashtagInput)
     } else if (e.key === 'Backspace' && !hashtagInput && currentHashtags.length > 0) {
       removeHashtag(currentHashtags[currentHashtags.length - 1])
     }
@@ -87,58 +128,153 @@ export default function ContentPane({ formData, onChange, currentPlatform, isLoc
     onChange({ ...formData, thumbnailFile: Object.assign(file, { _url: URL.createObjectURL(file) }) })
   }
 
-  const hasContent = formData.title?.trim() || formData.videoFile
+  const doCopy = async (field, value) => {
+    await copyText(value)
+    setCopiedField(field)
+    setTimeout(() => setCopiedField(f => f === field ? null : f), 2000)
+  }
 
-  // ── POST-LOCK: no platform selected ────────────────────────────
+  // ── POST-LOCK: no platform ──────────────────────────────────────
   if (isLocked && !currentPlatform) {
     return (
-      <div className="content-pane locked-all">
-        <div className="locked-all-inner">
-          <div className="locked-icon">🔒</div>
-          <h2 className="locked-title">Content locked</h2>
-          <p className="locked-sub">Select a platform on the left to see formatted output.</p>
-          {formData.title && (
-            <div className="locked-preview-title">"{formData.title.length > 70 ? formData.title.slice(0, 70) + '…' : formData.title}"</div>
-          )}
-          <button className="btn-edit" onClick={onUnlock}>✏️ Edit content</button>
+      <div className="content-pane locked-pick">
+        <div className="locked-pick-inner">
+          <div className="locked-pick-icon">🔒</div>
+          <h2 className="locked-pick-title">Content locked</h2>
+          <p className="locked-pick-sub">Select a platform from the left to begin publishing.</p>
         </div>
       </div>
     )
   }
 
-  // ── POST-LOCK: platform selected ────────────────────────────────
+  // ── POST-LOCK: platform selected ─────────────────────────────────
   if (isLocked && currentPlatform) {
     const p = currentPlatform
-    const tags = formData.platformHashtags?.[p.id] ?? []
-    const hashtagStr = tags.map(h => `#${h}`).join(' ')
-    const title = formData.title?.slice(0, p.maxTitleLength || 200) ?? ''
-    const desc = formData.description?.slice(0, p.maxDescLength || 5000) ?? ''
+    const overrides = formData.platformContent?.[p.id] ?? {}
+    const isCompleted = !!completedPlatforms[p.id]
+
+    // Effective values — per-platform overrides take precedence
+    const titleVal = overrides.title !== undefined
+      ? overrides.title
+      : (formData.title?.slice(0, p.maxTitleLength || 200) ?? '')
+    const descVal = overrides.description !== undefined
+      ? overrides.description
+      : (formData.description?.slice(0, p.maxDescLength || 5000) ?? '')
+
+    // User global tags prepend to platform-specific tags
+    const globalTags = formData.hashtags ?? []
+    const platformTags = formData.platformHashtags?.[p.id] ?? []
+    const allTags = [...globalTags, ...platformTags.filter(t => !globalTags.includes(t))]
+    const hashtagStr = allTags.map(h => `#${h}`).join(' ')
+
+    const updateOverride = (field, value) => {
+      onChange({
+        ...formData,
+        platformContent: {
+          ...formData.platformContent,
+          [p.id]: { ...(formData.platformContent?.[p.id] ?? {}), [field]: value },
+        },
+      })
+    }
+
+    const handleComplete = () => {
+      setShowConfetti(true)
+      setTimeout(() => {
+        setShowConfetti(false)
+        onPlatformComplete(p.id)
+      }, 1800)
+    }
 
     return (
       <div className="content-pane">
-        <PlatformHeader platform={p} onUnlock={onUnlock} showHashtagNote={false} />
+        {showConfetti && <Confetti />}
+        <PlatformHeader platform={p} />
 
         <div className="output-body">
           <div className="output-fields">
             {p.fields.includes('title') && (
-              <CopyField label={fieldLabel('title')} value={title} />
+              <div className="publish-group">
+                <div className="publish-group-header">
+                  <span className="publish-group-label">{fieldLabel('title').toUpperCase()}</span>
+                  <button
+                    className={`btn-copy-sm${copiedField === 'title' ? ' btn-copy-sm--done' : ''}`}
+                    onClick={() => doCopy('title', titleVal)}
+                  >
+                    {copiedField === 'title' ? '✓ Copied' : '⎘ Copy'}
+                  </button>
+                </div>
+                <input
+                  className="field-input"
+                  value={titleVal}
+                  onChange={e => updateOverride('title', e.target.value)}
+                  maxLength={p.maxTitleLength || 200}
+                />
+                <div className="field-meta">{titleVal.length}{p.maxTitleLength ? ` / ${p.maxTitleLength}` : ''}</div>
+              </div>
             )}
+
             {p.fields.includes('description') && (
-              <CopyField label={fieldLabel('description')} value={desc} />
+              <div className="publish-group">
+                <div className="publish-group-header">
+                  <span className="publish-group-label">{fieldLabel('description').toUpperCase()}</span>
+                  <button
+                    className={`btn-copy-sm${copiedField === 'description' ? ' btn-copy-sm--done' : ''}`}
+                    onClick={() => doCopy('description', descVal)}
+                  >
+                    {copiedField === 'description' ? '✓ Copied' : '⎘ Copy'}
+                  </button>
+                </div>
+                <textarea
+                  className="field-textarea"
+                  value={descVal}
+                  onChange={e => updateOverride('description', e.target.value)}
+                  rows={6}
+                  maxLength={p.maxDescLength || 5000}
+                />
+                <div className="field-meta">{descVal.length}{p.maxDescLength ? ` / ${p.maxDescLength}` : ''}</div>
+              </div>
             )}
+
             {p.fields.includes('hashtags') && (
-              <CopyField
-                label={fieldLabel('hashtags')}
-                value={hashtagStr}
-                hint={tags.length > 0 ? `${tags.length} tag${tags.length !== 1 ? 's' : ''} · includes platform best practices` : ''}
-              />
+              <div className="publish-group">
+                <div className="publish-group-header">
+                  <span className="publish-group-label">
+                    {fieldLabel('hashtags').toUpperCase()}
+                    <span className="publish-group-count"> · {allTags.length}</span>
+                    {p.maxHashtags > 0 && <span className="publish-group-count"> / {p.maxHashtags}</span>}
+                  </span>
+                  <button
+                    className={`btn-copy-sm${copiedField === 'hashtags' ? ' btn-copy-sm--done' : ''}`}
+                    onClick={() => doCopy('hashtags', hashtagStr)}
+                  >
+                    {copiedField === 'hashtags' ? '✓ Copied' : '⎘ Copy all'}
+                  </button>
+                </div>
+                <div className="hashtag-display">
+                  {allTags.map(tag => (
+                    <span
+                      key={tag}
+                      className={`tag-chip${globalTags.includes(tag) ? ' tag-chip--universal' : ''}`}
+                      title={globalTags.includes(tag) ? 'Your universal tag' : 'Platform tag'}
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                  {allTags.length === 0 && <span className="output-empty">No hashtags</span>}
+                </div>
+                {globalTags.length > 0 && (
+                  <div className="field-meta">
+                    {globalTags.length} universal tag{globalTags.length !== 1 ? 's' : ''} prepended · {allTags.length - globalTags.length} platform-specific
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
           <div className="output-media">
             {p.fields.includes('video') && (
               <div className="media-card">
-                <div className="media-card-label">{fieldLabel('video')}</div>
+                <div className="media-card-label">VIDEO</div>
                 {formData.videoFile ? (
                   <>
                     <video src={formData.videoFile._url} controls className="output-video" />
@@ -151,7 +287,7 @@ export default function ContentPane({ formData, onChange, currentPlatform, isLoc
             )}
             {p.fields.includes('thumbnail') && formData.thumbnailFile && (
               <div className="media-card">
-                <div className="media-card-label">{fieldLabel('thumbnail')}</div>
+                <div className="media-card-label">THUMBNAIL</div>
                 <img src={formData.thumbnailFile._url} alt="Thumbnail" className="output-thumb" />
               </div>
             )}
@@ -162,19 +298,24 @@ export default function ContentPane({ formData, onChange, currentPlatform, isLoc
 
         <div className="pane-footer">
           <button className="btn-upload" onClick={() => window.open(p.uploadUrl, '_blank')}>
-            Open {p.name} ↗
+            Open {p.shortName} ↗
+          </button>
+          <button
+            className={`btn-complete${isCompleted ? ' btn-complete--done' : ''}`}
+            onClick={!isCompleted ? handleComplete : undefined}
+            disabled={isCompleted}
+          >
+            {isCompleted ? '✓ Done' : '🎉 Upload Complete'}
           </button>
         </div>
       </div>
     )
   }
 
-  // ── PRE-LOCK FORM ───────────────────────────────────────────────
+  // ── PRE-LOCK FORM ────────────────────────────────────────────────
   return (
     <div className="content-pane">
-      {currentPlatform && (
-        <PlatformHeader platform={currentPlatform} showHashtagNote={true} />
-      )}
+      {currentPlatform && <PlatformHeader platform={currentPlatform} />}
 
       <div className="pane-body">
         {/* Text fields */}
@@ -240,11 +381,11 @@ export default function ContentPane({ formData, onChange, currentPlatform, isLoc
                   placeholder={currentHashtags.length === 0 ? 'Add hashtag, press Enter…' : ''}
                 />
               </div>
+              {!currentPlatform && (
+                <div className="suggested-note">Tags added here will appear first on every platform</div>
+              )}
               {currentPlatform && currentPlatform.suggestedHashtags?.length > 0 && (
                 <div className="suggested-note">Pre-filled with {currentPlatform.shortName} best practices · click × to remove any</div>
-              )}
-              {!currentPlatform && (
-                <div className="suggested-note">Select a platform tab to see pre-filled hashtag suggestions</div>
               )}
             </div>
           )}
@@ -279,7 +420,7 @@ export default function ContentPane({ formData, onChange, currentPlatform, isLoc
 
           {showField('thumbnail') && (
             <div
-              className={`media-drop${dragOver === 'thumb' ? ' media-drop--over' : ''}${formData.thumbnailFile ? ' media-drop--filled' : ''}`}
+              className={`media-drop media-drop--thumb${dragOver === 'thumb' ? ' media-drop--over' : ''}${formData.thumbnailFile ? ' media-drop--filled' : ''}`}
               onDragOver={e => { e.preventDefault(); setDragOver('thumb') }}
               onDragLeave={() => setDragOver(null)}
               onDrop={e => { e.preventDefault(); setDragOver(null); handleThumbFile(e.dataTransfer.files[0]) }}
@@ -301,18 +442,6 @@ export default function ContentPane({ formData, onChange, currentPlatform, isLoc
             </div>
           )}
         </div>
-      </div>
-
-      <div className="pane-footer">
-        <button
-          className="btn-lock"
-          onClick={onLock}
-          disabled={!hasContent}
-          title={!hasContent ? 'Add a title or video first' : 'Lock content and go to publish view'}
-        >
-          🔒 Lock &amp; Publish
-        </button>
-        {!hasContent && <span className="lock-hint">Add a title or video to continue</span>}
       </div>
     </div>
   )
