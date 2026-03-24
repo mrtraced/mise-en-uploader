@@ -10,52 +10,82 @@ function formatTimecode(s) {
   return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}.${ms}`
 }
 
-const PHASE_LABELS = {
-  extracting: 'Separating audio tracks…',
-  downloading: null, // uses progress text
-  loading: null,
-  transcribing: 'Transcribing…',
-}
-
 export default function WhisperPanel({ videoFile }) {
-  const [phase, setPhase]         = useState('idle') // idle | extracting | working | done | error
+  const [phase, setPhase]               = useState('idle')
   const [progressText, setProgressText] = useState('')
   const [progressPct, setProgressPct]   = useState(0)
-  const [progressPhase, setProgressPhase] = useState('') // downloading | loading | transcribing
-  const [chunks, setChunks]       = useState([])
+  const [progressPhase, setProgressPhase] = useState('')
+  const [chunks, setChunks]             = useState([])
   const workerRef = useRef(null)
 
-  // Clean up worker on unmount
   useEffect(() => () => { workerRef.current?.terminate() }, [])
 
-  // Reset if video changes
   useEffect(() => {
     setPhase('idle')
     setChunks([])
     setProgressPct(0)
   }, [videoFile?.name])
 
+  const setError = (msg) => {
+    setProgressText(msg)
+    setPhase('error')
+  }
+
   const handleTranscribe = async () => {
+    // Guard: SharedArrayBuffer required for WASM multi-threading
+    if (typeof SharedArrayBuffer === 'undefined') {
+      setError('Missing cross-origin headers — restart the app and try again. (SharedArrayBuffer unavailable)')
+      setPhase('error')
+      return
+    }
+
     try {
       setPhase('extracting')
-      setProgressText('Separating audio tracks…')
+      setProgressText('Reading video file…')
       setProgressPct(0)
       setProgressPhase('extracting')
 
-      const audio = await extractAudio(videoFile)
+      let audio
+      try {
+        audio = await extractAudio(videoFile)
+      } catch (err) {
+        // Cloud-only files (Google Drive, iCloud) may fail to read if not downloaded
+        if (err.message?.includes('network') || err.name === 'NotReadableError' || err.name === 'NetworkError') {
+          setError('Could not read file — if it\'s a cloud file (Google Drive, iCloud), download it locally first.')
+        } else {
+          setError(`Audio extraction failed: ${err.message}`)
+        }
+        return
+      }
 
       setPhase('working')
       setProgressText('Starting Whisper…')
       setProgressPct(0)
 
-      if (!workerRef.current) {
-        workerRef.current = new Worker(
+      // Terminate stale worker before creating a new one on re-run
+      if (workerRef.current) {
+        workerRef.current.terminate()
+        workerRef.current = null
+      }
+
+      let worker
+      try {
+        worker = new Worker(
           new URL('../workers/whisper.worker.js', import.meta.url),
           { type: 'module' }
         )
+        workerRef.current = worker
+      } catch (err) {
+        setError(`Failed to start worker: ${err.message}`)
+        return
       }
 
-      workerRef.current.onmessage = ({ data }) => {
+      // Catch worker-level JS errors (import failures, uncaught exceptions)
+      worker.onerror = (e) => {
+        setError(`Whisper worker error: ${e.message || 'unknown error'}`)
+      }
+
+      worker.onmessage = ({ data }) => {
         if (data.type === 'progress') {
           setProgressText(data.text)
           if (data.pct != null) setProgressPct(data.pct)
@@ -65,15 +95,13 @@ export default function WhisperPanel({ videoFile }) {
           setPhase('done')
           setProgressPct(100)
         } else if (data.type === 'error') {
-          setProgressText(data.message)
-          setPhase('error')
+          setError(data.message)
         }
       }
 
-      workerRef.current.postMessage({ type: 'transcribe', audio }, [audio.buffer])
+      worker.postMessage({ type: 'transcribe', audio }, [audio.buffer])
     } catch (err) {
-      setProgressText(err.message)
-      setPhase('error')
+      setError(err.message)
     }
   }
 
@@ -146,7 +174,8 @@ export default function WhisperPanel({ videoFile }) {
 
       {phase === 'idle' && (
         <p className="whisper-hint">
-          Local · free · private — model downloads once (~145 MB) and is cached.
+          Local · free · private — model downloads once (~75 MB) and is cached.
+          {videoFile && <><br /><em style={{ color: '#E5AC39' }}>Note: file must be downloaded locally (not cloud-only) to transcribe.</em></>}
         </p>
       )}
     </div>

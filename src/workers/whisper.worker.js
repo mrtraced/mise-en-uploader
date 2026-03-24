@@ -5,12 +5,17 @@ env.allowLocalModels = false
 
 let transcriber = null
 
+// Catch any unhandled promise rejections in the worker and surface them
+self.addEventListener('unhandledrejection', (e) => {
+  self.postMessage({ type: 'error', message: `Worker unhandled error: ${e.reason?.message || e.reason || 'unknown'}` })
+})
+
 self.onmessage = async ({ data }) => {
   if (data.type !== 'transcribe') return
 
   try {
     if (!transcriber) {
-      self.postMessage({ type: 'progress', text: 'Downloading Whisper model (~145 MB, cached after first run)…', pct: 0, phase: 'downloading' })
+      self.postMessage({ type: 'progress', text: 'Downloading Whisper model (~75 MB, cached after first run)…', pct: 0, phase: 'downloading' })
       transcriber = await pipeline(
         'automatic-speech-recognition',
         'Xenova/whisper-base',
@@ -44,3 +49,4 @@ self.onmessage = async ({ data }) => {
     self.postMessage({ type: 'error', message: err.message })
   }
 }
+
