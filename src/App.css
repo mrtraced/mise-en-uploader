@@ -30,29 +30,23 @@ body {
   overflow-y: auto;
 }
 
-/* ── Logo ───────────────────────────────────────────────────── */
-.nav-logo {
+/* ── Logo area ──────────────────────────────────────────────── */
+.nav-logo-area {
+  background: #F7F4F0;
+  margin: -18px -10px 12px;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid rgba(0,0,0,0.14);
   display: flex;
-  flex-direction: row;
-  align-items: baseline;
-  gap: 0;
-  padding: 6px 6px 2px;
-  margin-bottom: 14px;
-  white-space: nowrap;
+  align-items: center;
+  justify-content: center;
 }
-.nav-logo-mise {
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  color: #F0ECE4;
-  font-family: 'Lexend', sans-serif;
-}
-.nav-logo-uploader {
-  font-size: 13px;
-  font-weight: 300;
-  letter-spacing: 0.01em;
-  color: #E5AC39;
-  font-family: 'Lexend', sans-serif;
+.nav-logo-img {
+  width: 100%;
+  max-width: 148px;
+  height: auto;
+  max-height: 58px;
+  object-fit: contain;
+  display: block;
 }
 
 /* ── Nav Buttons ────────────────────────────────────────────── */

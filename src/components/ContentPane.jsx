@@ -80,12 +80,6 @@ const BP_DATA = [
     desc:  { text: 'Same as episode description', note: '4000 max' },
     tags:  { text: 'Not supported', note: '' },
   },
-  {
-    id: 'facebook',
-    title: { text: 'Same as Instagram', note: '500 max' },
-    desc:  { text: 'First 125 chars visible', note: '2200 max' },
-    tags:  { text: '5–15 sweet spot', note: 'max 30' },
-  },
 ]
 
 const UNIVERSAL_TIPS = [

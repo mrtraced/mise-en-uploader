@@ -123,8 +123,8 @@ export default function App() {
   return (
     <div className="app-shell">
       <nav className="platform-nav">
-        <div className="nav-logo">
-          <span className="nav-logo-mise">MISE EN </span><span className="nav-logo-uploader">Uploader</span>
+        <div className="nav-logo-area">
+          <img src="./logo.png" alt="Mise En Uploader" className="nav-logo-img" />
         </div>
 
         {/* ALL */}

@@ -1,17 +1,17 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
-  // Cross-origin isolation: enables SharedArrayBuffer for faster WASM threads
+  // file:// protocol in Electron production build needs relative paths
+  base: mode === 'production' ? './' : '/',
   server: {
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
     },
   },
-  // Exclude heavy ML packages from pre-bundling
   optimizeDeps: {
     exclude: ['@xenova/transformers'],
   },
-})
+}))
