@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo } from 'react'
 import { platforms as allPlatforms } from '../data/platforms'
+import WhisperPanel from './WhisperPanel'
 
 function formatBytes(bytes) {
   if (!bytes) return ''
@@ -164,9 +165,68 @@ function PlatformHeader({ platform }) {
   )
 }
 
+function PresetBar({ presets, onSave, onLoad, onDelete }) {
+  const [saving, setSaving] = useState(false)
+  const [nameInput, setNameInput] = useState('')
+  const [open, setOpen] = useState(false)
+
+  const handleSave = () => {
+    const name = nameInput.trim()
+    if (!name) return
+    onSave(name)
+    setNameInput('')
+    setSaving(false)
+  }
+
+  return (
+    <div className="preset-bar">
+      <div className="preset-bar-left">
+        <span className="preset-label">Presets</span>
+        {presets.length > 0 && (
+          <button className="preset-toggle" onClick={() => setOpen(o => !o)}>
+            {open ? '▲' : '▼'} {presets.length}
+          </button>
+        )}
+      </div>
+      <div className="preset-bar-right">
+        {saving ? (
+          <>
+            <input
+              className="preset-name-input"
+              placeholder="Preset name…"
+              value={nameInput}
+              onChange={e => setNameInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setSaving(false) }}
+              autoFocus
+            />
+            <button className="preset-save-confirm" onClick={handleSave}>Save</button>
+            <button className="preset-cancel" onClick={() => setSaving(false)}>✕</button>
+          </>
+        ) : (
+          <button className="preset-save-btn" onClick={() => setSaving(true)}>+ Save preset</button>
+        )}
+      </div>
+
+      {open && presets.length > 0 && (
+        <div className="preset-list">
+          {presets.map(p => (
+            <div key={p.id} className="preset-item">
+              <button className="preset-load-btn" onClick={() => { onLoad(p); setOpen(false) }}>
+                {p.name}
+              </button>
+              <button className="preset-del-btn" onClick={() => onDelete(p.id)} title="Delete preset">×</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function ContentPane({
   formData, onChange, currentPlatform, isLocked,
   completedPlatforms = {}, onPlatformComplete,
+  presets = [], onSavePreset, onLoadPreset, onDeletePreset,
 }) {
   const [hashtagInput, setHashtagInput] = useState('')
   const [dragOver, setDragOver] = useState(null)
@@ -417,6 +477,15 @@ export default function ContentPane({
       <div className="pane-body">
         {/* Text fields */}
         <div className="fields-col">
+          {!currentPlatform && (
+            <PresetBar
+              presets={presets}
+              onSave={onSavePreset}
+              onLoad={onLoadPreset}
+              onDelete={onDeletePreset}
+            />
+          )}
+
           {showField('title') && (
             <div className="field-group">
               <label className="field-label">{fieldLabel('title')}</label>
@@ -544,6 +613,13 @@ export default function ContentPane({
           )}
         </div>
       </div>
+
+      {/* Whisper lives below both columns, full-width within the pane */}
+      {formData.videoFile && (
+        <div className="whisper-wrap">
+          <WhisperPanel videoFile={formData.videoFile} />
+        </div>
+      )}
     </div>
   )
 }
