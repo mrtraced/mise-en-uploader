@@ -19,32 +19,31 @@ body {
 
 /* ── Left Nav ───────────────────────────────────────────────── */
 .platform-nav {
-  width: 182px;
+  width: 96px;
   flex-shrink: 0;
   background: #333436;
   border-right: 1px solid #252628;
   display: flex;
   flex-direction: column;
-  padding: 18px 10px 14px;
-  gap: 6px;
+  padding: 0 8px 12px;
+  gap: 4px;
   overflow-y: auto;
 }
 
 /* ── Logo area ──────────────────────────────────────────────── */
 .nav-logo-area {
   background: #F7F4F0;
-  margin: -18px -10px 12px;
-  padding: 12px 14px 10px;
+  margin: 0 -8px 10px;
+  padding: 10px 8px;
   border-bottom: 1px solid rgba(0,0,0,0.14);
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 90px;
 }
 .nav-logo-img {
   width: 100%;
-  max-width: 148px;
   height: auto;
-  max-height: 58px;
   object-fit: contain;
   display: block;
 }
@@ -53,39 +52,37 @@ body {
 .nav-btn {
   width: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 9px;
-  padding: 11px 13px;
+  justify-content: center;
+  gap: 4px;
+  padding: 13px 6px;
   border: 1.5px solid transparent;
   border-radius: 12px;
-  font-size: 13px;
-  font-weight: 600;
   font-family: inherit;
   cursor: pointer;
   transition: background 0.13s, color 0.13s, border-color 0.13s, box-shadow 0.13s;
-  text-align: left;
-  line-height: 1.3;
+  text-align: center;
   position: relative;
+  aspect-ratio: 1;
 }
 
-/* ALL button */
+/* ALL button — same base as platform buttons */
 .nav-all {
-  background: rgba(255,255,255,0.08);
-  color: #D4CEBF;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  justify-content: center;
-  padding: 12px 13px;
-  border-radius: 12px;
-  border-color: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.06);
+  color: #C8C2B6;
+  border-color: rgba(255,255,255,0.08);
 }
-.nav-all:hover:not(.nav-active) { background: rgba(255,255,255,0.13); color: #F0ECE4; }
+.nav-all:hover:not(.nav-active) { background: rgba(255,255,255,0.11); color: #E8E2D8; }
 .nav-all.nav-active {
   background: #E5AC39;
   color: #333436;
   border-color: #E5AC39;
   box-shadow: 0 2px 8px rgba(229, 172, 57, 0.4);
+}
+.nav-all-icon {
+  font-size: 20px;
+  line-height: 1;
 }
 
 /* Platform buttons */
@@ -93,8 +90,8 @@ body {
   background: rgba(255,255,255,0.06);
   color: #C8C2B6;
   border-color: rgba(255,255,255,0.08);
-  border-left-width: 3px;
-  border-left-color: var(--pc, rgba(255,255,255,0.15));
+  border-bottom-width: 3px;
+  border-bottom-color: var(--pc, rgba(255,255,255,0.15));
 }
 .nav-platform:hover:not(.nav-active):not(.nav-done) {
   background: rgba(255,255,255,0.11);
@@ -103,7 +100,7 @@ body {
 .nav-platform.nav-active {
   background: rgba(229, 172, 57, 0.12);
   border-color: rgba(229, 172, 57, 0.3);
-  border-left-color: var(--pc, #E5AC39);
+  border-bottom-color: var(--pc, #E5AC39);
   color: #F0ECE4;
   box-shadow: 0 1px 6px rgba(229, 172, 57, 0.15);
 }
@@ -125,13 +122,33 @@ body {
 .nav-platform.nav-done:hover { background: rgba(34, 197, 94, 0.18); }
 .nav-platform.nav-done.nav-active { background: rgba(34, 197, 94, 0.22); }
 
-.nav-emoji { font-size: 15px; flex-shrink: 0; }
-.nav-label { flex: 1; }
+.nav-emoji { font-size: 20px; line-height: 1; }
+.nav-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.nav-all .nav-label { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; }
 .nav-check {
-  font-size: 11px;
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  font-size: 9px;
   font-weight: 700;
   color: #22C55E;
-  margin-left: auto;
+  background: rgba(34,197,94,0.15);
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .nav-done .nav-check { color: #86EFAC; }
 
@@ -145,17 +162,18 @@ body {
 /* ── Populate / Repopulate button ───────────────────────────── */
 .nav-populate-btn {
   width: 100%;
-  padding: 11px 14px;
+  padding: 9px 6px;
   background: #E5AC39;
   color: #333436;
   border: none;
-  border-radius: 12px;
-  font-size: 13px;
+  border-radius: 10px;
+  font-size: 11px;
   font-weight: 700;
   font-family: 'Lexend', inherit;
   cursor: pointer;
   transition: background 0.13s, box-shadow 0.13s, opacity 0.13s;
   letter-spacing: 0.01em;
+  text-align: center;
 }
 .nav-populate-btn:hover:not(:disabled) {
   background: #F0BB50;
@@ -178,33 +196,34 @@ body {
 .nav-repop-confirm {
   background: rgba(229, 172, 57, 0.08);
   border: 1.5px solid rgba(229, 172, 57, 0.25);
-  border-radius: 12px;
-  padding: 10px 12px 10px;
+  border-radius: 10px;
+  padding: 8px 8px 8px;
 }
 .nav-repop-confirm p {
-  font-size: 11.5px;
+  font-size: 10px;
   font-weight: 600;
   color: #E0D4B0;
   line-height: 1.4;
-  margin-bottom: 8px;
+  margin-bottom: 7px;
+  text-align: center;
 }
 .nav-repop-confirm p span {
   font-weight: 400;
   color: rgba(255,255,255,0.35);
-  font-size: 10.5px;
+  font-size: 9.5px;
 }
 .nav-repop-btns {
   display: flex;
-  gap: 5px;
+  gap: 4px;
 }
 .nav-repop-yes {
   flex: 1;
-  padding: 6px 8px;
+  padding: 5px 4px;
   background: #E5AC39;
   color: #333436;
   border: none;
-  border-radius: 8px;
-  font-size: 11px;
+  border-radius: 7px;
+  font-size: 10px;
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
@@ -212,15 +231,17 @@ body {
 }
 .nav-repop-yes:hover { background: #F0BB50; }
 .nav-repop-cancel {
-  padding: 6px 8px;
+  flex: 1;
+  padding: 5px 4px;
   background: transparent;
   border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 8px;
-  font-size: 11px;
+  border-radius: 7px;
+  font-size: 10px;
   font-weight: 500;
   font-family: inherit;
   color: rgba(255,255,255,0.35);
   cursor: pointer;
+  text-align: center;
 }
 .nav-repop-cancel:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.6); }
 
@@ -264,7 +285,7 @@ body {
 /* ── Clear button ───────────────────────────────────────────── */
 .nav-clear-btn {
   width: 100%;
-  padding: 8px 14px;
+  padding: 7px 6px;
   background: transparent;
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 10px;
@@ -290,20 +311,28 @@ body {
 
 /* ── Copyright ──────────────────────────────────────────────── */
 .nav-copyright {
-  font-size: 9px;
+  font-size: 8px;
   color: rgba(255,255,255,0.22);
-  letter-spacing: 0.04em;
-  text-align: right;
+  letter-spacing: 0.03em;
+  text-align: center;
   padding: 4px 2px 2px;
+  line-height: 1.3;
 }
 
-/* ── Right: Content Area ────────────────────────────────────── */
+/* ── Right: Main area (content + whisper bar) ───────────────── */
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #EDEAE5;
+}
+
 .content-area {
   flex: 1;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: #EDEAE5;
 }
 
 /* ── Content Pane ───────────────────────────────────────────── */
@@ -1007,18 +1036,40 @@ body {
 }
 .preset-del-btn:hover { color: #EF4444; background: rgba(239,68,68,0.08); }
 
-/* ── Whisper panel ──────────────────────────────────────────── */
-.whisper-wrap {
-  border-top: 1px solid #E8E4DE;
-  padding: 14px 20px;
-  background: #F7F5F2;
+.preset-export-btn {
   flex-shrink: 0;
+  background: none;
+  border: 1px solid #E8E4DE;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #AAA;
+  cursor: pointer;
+  padding: 3px 7px;
+  border-radius: 5px;
+  transition: all 0.12s;
 }
+.preset-export-btn:hover { border-color: #E5AC39; color: #C89020; background: rgba(229,172,57,0.06); }
 
+.preset-import-btn {
+  font-size: 10px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 3px 8px;
+  background: none;
+  border: 1px solid #DDD9D3;
+  border-radius: 5px;
+  color: #AAA;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.preset-import-btn:hover { border-color: #6B5CF6; color: #6B5CF6; background: rgba(107,92,246,0.05); }
+
+/* ── Whisper panel — persistent bottom bar ──────────────────── */
 .whisper-panel {
-  background: #fff;
-  border: 1.5px solid #E8E4DE;
-  border-radius: 12px;
+  background: #F7F5F2;
+  border-top: 1.5px solid #DDD9D3;
+  flex-shrink: 0;
   overflow: hidden;
 }
 
@@ -1026,9 +1077,10 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
-  border-bottom: 1px solid #F2F0EC;
+  padding: 9px 18px;
+  border-bottom: 1px solid #E8E4DE;
   gap: 10px;
+  background: #F0EDE8;
 }
 .whisper-title {
   font-size: 12px;
@@ -1082,25 +1134,36 @@ body {
 }
 .btn-whisper-dl:hover { background: #F0BB50; }
 
-.whisper-progress {
+.whisper-progress-area {
+  padding: 10px 18px 12px;
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-  color: #666;
-  font-size: 12px;
+  flex-direction: column;
+  gap: 6px;
 }
-.whisper-progress-text { flex: 1; }
-
-@keyframes spin { to { transform: rotate(360deg); } }
-.whisper-spinner {
-  width: 16px;
-  height: 16px;
-  border: 2.5px solid #DDD9D3;
-  border-top-color: #6B5CF6;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-  flex-shrink: 0;
+.whisper-progress-bar {
+  height: 4px;
+  background: #E8E4DE;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.whisper-progress-fill {
+  height: 100%;
+  background: #E5AC39;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+@keyframes pulse-bar {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+.whisper-progress-fill--pulse {
+  width: 30% !important;
+  animation: pulse-bar 1.4s ease-in-out infinite;
+}
+.whisper-status-text {
+  font-size: 11px;
+  color: #888;
+  font-style: italic;
 }
 
 .whisper-error {
@@ -1125,7 +1188,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0;
-  max-height: 260px;
+  max-height: 200px;
   overflow-y: auto;
 }
 .whisper-seg {
@@ -1164,3 +1227,45 @@ body {
   background: #FDFCFB;
   box-shadow: 0 0 0 2px rgba(107,92,246,0.08);
 }
+
+/* ── Whisper panel padding adjustments ──────────────────────── */
+.whisper-error { padding: 10px 18px; color: #EF4444; font-size: 12px; }
+.whisper-empty { padding: 10px 18px; color: #BBB; font-size: 12px; font-style: italic; }
+.whisper-hint  { padding: 8px 18px 10px; color: #BBB; font-size: 11px; font-style: italic; }
+.whisper-seg   { padding: 7px 18px; }
+
+/* ── Reveal in Finder buttons ───────────────────────────────── */
+.media-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-reveal {
+  padding: 4px 8px;
+  background: #EDEAE5;
+  border: 1px solid #DDD9D3;
+  border-radius: 7px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.12s;
+  flex-shrink: 0;
+}
+.btn-reveal:hover { background: #E0DDD8; }
+
+.media-reveal-btn {
+  font-size: 10.5px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 4px 9px;
+  background: rgba(0,0,0,0.45);
+  color: rgba(255,255,255,0.85);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: background 0.12s;
+  z-index: 1;
+  position: relative;
+}
+.media-reveal-btn:hover { background: rgba(0,0,0,0.65); }

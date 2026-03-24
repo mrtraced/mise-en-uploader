@@ -1,6 +1,5 @@
 import { useState, useRef, useMemo } from 'react'
 import { platforms as allPlatforms } from '../data/platforms'
-import WhisperPanel from './WhisperPanel'
 
 function formatBytes(bytes) {
   if (!bytes) return ''
@@ -21,6 +20,22 @@ async function copyText(text) {
     document.execCommand('copy')
     document.body.removeChild(el)
   }
+}
+
+// Open a URL — use native browser in Electron (preserves auth), window.open in browser
+function openPlatformUrl(url) {
+  if (window.electronAPI?.openExternal) {
+    window.electronAPI.openExternal(url)
+  } else {
+    window.open(url, '_blank')
+  }
+}
+
+// Reveal file in Finder/Explorer (Electron only)
+async function revealFile(file) {
+  if (!window.electronAPI?.getFilePath) return
+  const fullPath = window.electronAPI.getFilePath(file)
+  if (fullPath) window.electronAPI.revealInFinder(fullPath)
 }
 
 function Confetti() {
@@ -159,7 +174,7 @@ function PlatformHeader({ platform }) {
   )
 }
 
-function PresetBar({ presets, onSave, onLoad, onDelete }) {
+function PresetBar({ presets, onSave, onLoad, onDelete, onExport, onImport }) {
   const [saving, setSaving] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const [open, setOpen] = useState(false)
@@ -181,6 +196,7 @@ function PresetBar({ presets, onSave, onLoad, onDelete }) {
             {open ? '▲' : '▼'} {presets.length}
           </button>
         )}
+        <button className="preset-import-btn" onClick={onImport} title="Import .mise file">↑ Import</button>
       </div>
       <div className="preset-bar-right">
         {saving ? (
@@ -208,6 +224,7 @@ function PresetBar({ presets, onSave, onLoad, onDelete }) {
               <button className="preset-load-btn" onClick={() => { onLoad(p); setOpen(false) }}>
                 {p.name}
               </button>
+              <button className="preset-export-btn" onClick={() => onExport(p)} title="Export as .mise file">↓</button>
               <button className="preset-del-btn" onClick={() => onDelete(p.id)} title="Delete preset">×</button>
             </div>
           ))}
@@ -221,6 +238,7 @@ export default function ContentPane({
   formData, onChange, currentPlatform, isPopulated,
   completedPlatforms = {}, onPlatformComplete,
   presets = [], onSavePreset, onLoadPreset, onDeletePreset,
+  onExportPreset, onImportPreset,
 }) {
   const [hashtagInput, setHashtagInput] = useState('')
   const [dragOver, setDragOver] = useState(null)
@@ -237,7 +255,6 @@ export default function ContentPane({
     return { title: 'Title', description: 'Description', hashtags: 'Hashtags', video: 'Video', thumbnail: 'Thumbnail' }[field] || field
   }
 
-  // Per-platform hashtags, or global if ALL
   const currentHashtags = currentPlatform
     ? (formData.platformHashtags?.[currentPlatform.id] ?? [])
     : (formData.hashtags ?? [])
@@ -291,7 +308,6 @@ export default function ContentPane({
     const overrides = formData.platformContent?.[p.id] ?? {}
     const isCompleted = !!completedPlatforms[p.id]
 
-    // Effective values — per-platform overrides take precedence
     const titleVal = overrides.title !== undefined
       ? overrides.title
       : (formData.title?.slice(0, p.maxTitleLength || 200) ?? '')
@@ -299,7 +315,6 @@ export default function ContentPane({
       ? overrides.description
       : (formData.description?.slice(0, p.maxDescLength || 5000) ?? '')
 
-    // User global tags prepend to platform-specific tags
     const globalTags = formData.hashtags ?? []
     const platformTags = formData.platformHashtags?.[p.id] ?? []
     const allTags = [...globalTags, ...platformTags.filter(t => !globalTags.includes(t))]
@@ -402,7 +417,7 @@ export default function ContentPane({
                 </div>
                 {globalTags.length > 0 && (
                   <div className="field-meta">
-                    {globalTags.length} universal tag{globalTags.length !== 1 ? 's' : ''} prepended · {allTags.length - globalTags.length} platform-specific
+                    {globalTags.length} universal · {allTags.length - globalTags.length} platform-specific
                   </div>
                 )}
               </div>
@@ -415,12 +430,19 @@ export default function ContentPane({
                 <div className="media-card-header-row">
                   <div className="media-card-label">{p.fieldLabels?.video || 'VIDEO'}</div>
                   {formData.videoFile && (
-                    <button
-                      className={`btn-copy-sm${copiedField === 'video-name' ? ' btn-copy-sm--done' : ''}`}
-                      onClick={() => doCopy('video-name', formData.videoFile.name)}
-                    >
-                      {copiedField === 'video-name' ? '✓ Copied' : '⎘ Filename'}
-                    </button>
+                    <div className="media-card-actions">
+                      <button
+                        className={`btn-copy-sm${copiedField === 'video-name' ? ' btn-copy-sm--done' : ''}`}
+                        onClick={() => doCopy('video-name', formData.videoFile.name)}
+                      >
+                        {copiedField === 'video-name' ? '✓ Copied' : '⎘ Filename'}
+                      </button>
+                      {window.electronAPI?.isElectron && (
+                        <button className="btn-reveal" onClick={() => revealFile(formData.videoFile)} title="Reveal in Finder">
+                          📂
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
                 {formData.videoFile ? (
@@ -437,12 +459,19 @@ export default function ContentPane({
               <div className="media-card">
                 <div className="media-card-header-row">
                   <div className="media-card-label">{p.fieldLabels?.thumbnail || 'THUMBNAIL'}</div>
-                  <button
-                    className={`btn-copy-sm${copiedField === 'thumb-name' ? ' btn-copy-sm--done' : ''}`}
-                    onClick={() => doCopy('thumb-name', formData.thumbnailFile.name)}
-                  >
-                    {copiedField === 'thumb-name' ? '✓ Copied' : '⎘ Filename'}
-                  </button>
+                  <div className="media-card-actions">
+                    <button
+                      className={`btn-copy-sm${copiedField === 'thumb-name' ? ' btn-copy-sm--done' : ''}`}
+                      onClick={() => doCopy('thumb-name', formData.thumbnailFile.name)}
+                    >
+                      {copiedField === 'thumb-name' ? '✓ Copied' : '⎘ Filename'}
+                    </button>
+                    {window.electronAPI?.isElectron && (
+                      <button className="btn-reveal" onClick={() => revealFile(formData.thumbnailFile)} title="Reveal in Finder">
+                        📂
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <img src={formData.thumbnailFile._url} alt="Thumbnail" className="output-thumb" />
               </div>
@@ -453,7 +482,7 @@ export default function ContentPane({
         {p.tips && <div className="tips-box"><strong>Tips</strong> · {p.tips}</div>}
 
         <div className="pane-footer">
-          <button className="btn-upload" onClick={() => window.open(p.uploadUrl, '_blank')}>
+          <button className="btn-upload" onClick={() => openPlatformUrl(p.uploadUrl)}>
             Open {p.shortName} ↗
           </button>
           <button
@@ -468,22 +497,20 @@ export default function ContentPane({
     )
   }
 
-  // ── PRE-LOCK FORM ────────────────────────────────────────────────
+  // ── ALL VIEW ─────────────────────────────────────────────────────
   return (
     <div className="content-pane">
-      {currentPlatform && <PlatformHeader platform={currentPlatform} />}
-
       <div className="pane-body">
         {/* Text fields */}
         <div className="fields-col">
-          {!currentPlatform && (
-            <PresetBar
-              presets={presets}
-              onSave={onSavePreset}
-              onLoad={onLoadPreset}
-              onDelete={onDeletePreset}
-            />
-          )}
+          <PresetBar
+            presets={presets}
+            onSave={onSavePreset}
+            onLoad={onLoadPreset}
+            onDelete={onDeletePreset}
+            onExport={onExportPreset}
+            onImport={onImportPreset}
+          />
 
           {showField('title') && (
             <div className="field-group">
@@ -494,12 +521,10 @@ export default function ContentPane({
                 value={formData.title}
                 onChange={e => onChange({ ...formData, title: e.target.value })}
                 placeholder="Enter title…"
-                maxLength={currentPlatform?.maxTitleLength || 200}
+                maxLength={200}
               />
               {formData.title && (
-                <div className="field-meta">
-                  {formData.title.length} chars{currentPlatform?.maxTitleLength ? ` / ${currentPlatform.maxTitleLength}` : ''}
-                </div>
+                <div className="field-meta">{formData.title.length} chars</div>
               )}
             </div>
           )}
@@ -515,21 +540,14 @@ export default function ContentPane({
                 rows={5}
               />
               {formData.description && (
-                <div className="field-meta">
-                  {formData.description.length} chars{currentPlatform?.maxDescLength ? ` / ${currentPlatform.maxDescLength}` : ''}
-                </div>
+                <div className="field-meta">{formData.description.length} chars</div>
               )}
             </div>
           )}
 
           {showField('hashtags') && (
             <div className="field-group">
-              <label className="field-label">
-                {fieldLabel('hashtags')}
-                {currentPlatform?.maxHashtags
-                  ? <span className="field-label-meta"> · max {currentPlatform.maxHashtags}</span>
-                  : null}
-              </label>
+              <label className="field-label">{fieldLabel('hashtags')}</label>
               <div className="tag-area" onClick={() => document.querySelector('.tag-input')?.focus()}>
                 {currentHashtags.map(tag => (
                   <span key={tag} className="tag-chip">
@@ -546,16 +564,11 @@ export default function ContentPane({
                   placeholder={currentHashtags.length === 0 ? 'Add hashtag, press Enter…' : ''}
                 />
               </div>
-              {!currentPlatform && (
-                <div className="suggested-note">Tags added here will appear first on every platform</div>
-              )}
-              {currentPlatform && currentPlatform.suggestedHashtags?.length > 0 && (
-                <div className="suggested-note">Pre-filled with {currentPlatform.shortName} best practices · click × to remove any</div>
-              )}
+              <div className="suggested-note">Tags added here will appear first on every platform</div>
             </div>
           )}
 
-          {!currentPlatform && <BestPracticesPanel />}
+          <BestPracticesPanel />
         </div>
 
         {/* Media */}
@@ -574,6 +587,15 @@ export default function ContentPane({
                   <video src={formData.videoFile._url} className="media-preview-video" />
                   <div className="media-preview-name" title={formData.videoFile.name}>{formData.videoFile.name}</div>
                   <div className="media-preview-meta">{formatBytes(formData.videoFile.size)}</div>
+                  {window.electronAPI?.isElectron && (
+                    <button
+                      className="media-reveal-btn"
+                      onClick={e => { e.stopPropagation(); revealFile(formData.videoFile) }}
+                      title="Show in Finder"
+                    >
+                      📂 Show in Finder
+                    </button>
+                  )}
                   <div className="media-replace-overlay">↑ Replace</div>
                 </>
               ) : (
@@ -599,6 +621,15 @@ export default function ContentPane({
                 <>
                   <img src={formData.thumbnailFile._url} alt="Thumbnail" className="media-preview-img" />
                   <div className="media-preview-name" title={formData.thumbnailFile.name}>{formData.thumbnailFile.name}</div>
+                  {window.electronAPI?.isElectron && (
+                    <button
+                      className="media-reveal-btn"
+                      onClick={e => { e.stopPropagation(); revealFile(formData.thumbnailFile) }}
+                      title="Show in Finder"
+                    >
+                      📂 Show in Finder
+                    </button>
+                  )}
                   <div className="media-replace-overlay">↑ Replace</div>
                 </>
               ) : (
@@ -612,13 +643,6 @@ export default function ContentPane({
           )}
         </div>
       </div>
-
-      {/* Whisper lives below both columns, full-width within the pane */}
-      {formData.videoFile && (
-        <div className="whisper-wrap">
-          <WhisperPanel videoFile={formData.videoFile} />
-        </div>
-      )}
     </div>
   )
 }

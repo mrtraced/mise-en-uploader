@@ -10,10 +10,19 @@ function formatTimecode(s) {
   return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}.${ms}`
 }
 
+const PHASE_LABELS = {
+  extracting: 'Separating audio tracks…',
+  downloading: null, // uses progress text
+  loading: null,
+  transcribing: 'Transcribing…',
+}
+
 export default function WhisperPanel({ videoFile }) {
-  const [phase, setPhase]   = useState('idle') // idle | extracting | working | done | error
-  const [progress, setProgress] = useState('')
-  const [chunks, setChunks] = useState([])
+  const [phase, setPhase]         = useState('idle') // idle | extracting | working | done | error
+  const [progressText, setProgressText] = useState('')
+  const [progressPct, setProgressPct]   = useState(0)
+  const [progressPhase, setProgressPhase] = useState('') // downloading | loading | transcribing
+  const [chunks, setChunks]       = useState([])
   const workerRef = useRef(null)
 
   // Clean up worker on unmount
@@ -23,17 +32,21 @@ export default function WhisperPanel({ videoFile }) {
   useEffect(() => {
     setPhase('idle')
     setChunks([])
+    setProgressPct(0)
   }, [videoFile?.name])
 
   const handleTranscribe = async () => {
     try {
       setPhase('extracting')
-      setProgress('Extracting audio…')
+      setProgressText('Separating audio tracks…')
+      setProgressPct(0)
+      setProgressPhase('extracting')
 
       const audio = await extractAudio(videoFile)
 
       setPhase('working')
-      setProgress('Starting Whisper…')
+      setProgressText('Starting Whisper…')
+      setProgressPct(0)
 
       if (!workerRef.current) {
         workerRef.current = new Worker(
@@ -43,20 +56,23 @@ export default function WhisperPanel({ videoFile }) {
       }
 
       workerRef.current.onmessage = ({ data }) => {
-        if (data.type === 'progress') setProgress(data.text)
-        else if (data.type === 'result') {
+        if (data.type === 'progress') {
+          setProgressText(data.text)
+          if (data.pct != null) setProgressPct(data.pct)
+          if (data.phase) setProgressPhase(data.phase)
+        } else if (data.type === 'result') {
           setChunks(data.chunks)
           setPhase('done')
-        }
-        else if (data.type === 'error') {
-          setProgress(data.message)
+          setProgressPct(100)
+        } else if (data.type === 'error') {
+          setProgressText(data.message)
           setPhase('error')
         }
       }
 
       workerRef.current.postMessage({ type: 'transcribe', audio }, [audio.buffer])
     } catch (err) {
-      setProgress(err.message)
+      setProgressText(err.message)
       setPhase('error')
     }
   }
@@ -68,6 +84,7 @@ export default function WhisperPanel({ videoFile }) {
     downloadSRT(chunks, videoFile?.name || 'captions')
 
   const busy = phase === 'extracting' || phase === 'working'
+  const isIndeterminate = phase === 'extracting' || progressPhase === 'transcribing'
 
   return (
     <div className="whisper-panel">
@@ -85,21 +102,26 @@ export default function WhisperPanel({ videoFile }) {
               <button className="btn-whisper-dl" onClick={handleDownload}>↓ SRT</button>
             </>
           )}
-          {(phase === 'error') && (
+          {phase === 'error' && (
             <button className="btn-whisper-sm" onClick={handleTranscribe}>↺ Retry</button>
           )}
         </div>
       </div>
 
       {busy && (
-        <div className="whisper-progress">
-          <div className="whisper-spinner" />
-          <span className="whisper-progress-text">{progress}</span>
+        <div className="whisper-progress-area">
+          <div className="whisper-progress-bar">
+            <div
+              className={`whisper-progress-fill${isIndeterminate ? ' whisper-progress-fill--pulse' : ''}`}
+              style={isIndeterminate ? {} : { width: `${progressPct}%` }}
+            />
+          </div>
+          <p className="whisper-status-text">{progressText}</p>
         </div>
       )}
 
       {phase === 'error' && (
-        <div className="whisper-error">⚠ {progress}</div>
+        <div className="whisper-error">⚠ {progressText}</div>
       )}
 
       {phase === 'done' && chunks.length === 0 && (
@@ -124,7 +146,7 @@ export default function WhisperPanel({ videoFile }) {
 
       {phase === 'idle' && (
         <p className="whisper-hint">
-          Local · free · private — model downloads once (~75 MB) and is cached.
+          Local · free · private — model downloads once (~145 MB) and is cached.
         </p>
       )}
     </div>

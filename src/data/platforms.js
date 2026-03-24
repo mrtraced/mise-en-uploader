@@ -36,7 +36,7 @@ export const platforms = [
     name: 'TikTok',
     shortName: 'TikTok',
     emoji: '🎵',
-    color: '#000000',
+    color: '#69C9D0',
     uploadUrl: 'https://www.tiktok.com/upload/',
     limits: { duration: '10 min (best <60s)', fileSize: '4 GB', aspectRatio: '9:16', resolution: '1080×1920' },
     fields: ['title', 'hashtags', 'video', 'thumbnail'],

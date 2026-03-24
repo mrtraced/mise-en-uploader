@@ -1,4 +1,5 @@
-const { app, BrowserWindow, shell, ipcMain, session } = require('electron')
+const { app, BrowserWindow, shell, ipcMain, session, dialog } = require('electron')
+const fs = require('fs').promises
 const path = require('path')
 
 const isDev = !app.isPackaged
@@ -21,13 +22,14 @@ function createWindow() {
     show: false,
   })
 
-  // Cross-origin isolation for SharedArrayBuffer (Whisper WASM multi-threading)
+  // Cross-origin isolation for SharedArrayBuffer (Whisper WASM)
+  // credentialless allows HuggingFace CDN resources while still enabling SAB
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
         'Cross-Origin-Opener-Policy': ['same-origin'],
-        'Cross-Origin-Embedder-Policy': ['require-corp'],
+        'Cross-Origin-Embedder-Policy': ['credentialless'],
       },
     })
   })
@@ -56,4 +58,41 @@ app.on('activate', () => {
 // Reveal a file in Finder / Explorer
 ipcMain.handle('reveal-in-finder', (_, filePath) => {
   shell.showItemInFolder(filePath)
+})
+
+// Open a URL in the system default browser (preserves user auth/sessions)
+ipcMain.handle('open-external', (_, url) => {
+  shell.openExternal(url)
+})
+
+// Save preset as a .mise file — asks user where to save
+ipcMain.handle('save-mise-file', async (_, { defaultName, content }) => {
+  const { filePath, canceled } = await dialog.showSaveDialog({
+    title: 'Save Preset',
+    defaultPath: defaultName,
+    filters: [
+      { name: 'Mise Preset', extensions: ['mise'] },
+      { name: 'JSON', extensions: ['json'] },
+    ],
+    buttonLabel: 'Save Preset',
+  })
+  if (canceled || !filePath) return { success: false }
+  await fs.writeFile(filePath, content, 'utf8')
+  return { success: true, filePath }
+})
+
+// Open a .mise preset file
+ipcMain.handle('open-mise-file', async () => {
+  const { filePaths, canceled } = await dialog.showOpenDialog({
+    title: 'Open Preset',
+    filters: [
+      { name: 'Mise Preset', extensions: ['mise', 'json'] },
+      { name: 'All Files', extensions: ['*'] },
+    ],
+    properties: ['openFile'],
+    buttonLabel: 'Open Preset',
+  })
+  if (canceled || !filePaths.length) return { success: false }
+  const content = await fs.readFile(filePaths[0], 'utf8')
+  return { success: true, content, filePath: filePaths[0] }
 })
