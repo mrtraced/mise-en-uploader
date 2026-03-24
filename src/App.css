@@ -357,6 +357,113 @@ body {
   padding-left: 2px;
 }
 
+/* ── Best Practices Panel ───────────────────────────────────── */
+.bp-panel {
+  margin-top: 6px;
+  background: #FDFCFB;
+  border: 1.5px solid #E8E4DE;
+  border-radius: 12px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.bp-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #AAA;
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid #EEE;
+}
+
+.bp-table-wrap {
+  overflow-x: auto;
+}
+
+.bp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+.bp-table thead th {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #BBB;
+  padding: 6px 12px 5px;
+  text-align: left;
+  border-bottom: 1px solid #EEE;
+  white-space: nowrap;
+}
+.bp-table thead th:first-child { padding-left: 14px; }
+
+.bp-table tbody tr {
+  border-bottom: 1px solid #F2F0EC;
+  transition: background 0.1s;
+}
+.bp-table tbody tr:last-child { border-bottom: none; }
+.bp-table tbody tr:hover { background: #FAF9F7; }
+
+.bp-table tbody td {
+  padding: 7px 12px;
+  vertical-align: middle;
+  color: #4A4744;
+  line-height: 1.4;
+}
+.bp-table tbody td:first-child { padding-left: 14px; }
+
+.bp-platform-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: #2A2A2A !important;
+}
+.bp-emoji { font-size: 13px; }
+
+.bp-main { color: #3A3836; }
+.bp-note { color: #AAA; font-size: 10.5px; }
+.bp-na { color: #CCC; }
+
+/* universal tips */
+.bp-tips {
+  padding: 8px 14px 10px;
+  border-top: 1px solid #EEE;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.bp-tip-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 11.5px;
+  color: #666;
+  line-height: 1.4;
+}
+.bp-tip-icon { flex-shrink: 0; font-size: 12px; margin-top: 1px; }
+
+/* ── Media replace overlay ──────────────────────────────────── */
+.media-replace-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 26, 26, 0.55);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+  border-radius: 10px;
+}
+.media-drop:hover .media-replace-overlay { opacity: 1; }
+
 /* ── Hashtag display (publish view) ─────────────────────────── */
 .hashtag-display {
   display: flex;

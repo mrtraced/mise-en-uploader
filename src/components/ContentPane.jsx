@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo } from 'react'
+import { platforms as allPlatforms } from '../data/platforms'
 
 function formatBytes(bytes) {
   if (!bytes) return ''
@@ -49,6 +50,102 @@ function Confetti() {
           borderRadius: p.radius,
         }} />
       ))}
+    </div>
+  )
+}
+
+const BP_DATA = [
+  {
+    id: 'instagram',
+    title: { text: 'Not shown in feed', note: '200 max' },
+    desc:  { text: 'First 125 chars before "more"', note: 'put hook here' },
+    tags:  { text: '5–15 sweet spot', note: 'max 30' },
+  },
+  {
+    id: 'youtube',
+    title: { text: '≤ 60 chars for search', note: '100 max' },
+    desc:  { text: 'First 100 chars in feed', note: 'keywords early' },
+    tags:  { text: 'Use as keywords', note: 'max 15' },
+  },
+  {
+    id: 'tiktok',
+    title: { text: 'Caption = title — first 150 matter', note: '2200 max' },
+    desc:  { text: '—', note: '' },
+    tags:  { text: '3–8 focused + #fyp', note: 'max 20' },
+  },
+  {
+    id: 'spotify',
+    title: { text: 'Match episode title exactly', note: '200 max' },
+    desc:  { text: 'Same as episode description', note: '4000 max' },
+    tags:  { text: 'Not supported', note: '' },
+  },
+  {
+    id: 'facebook',
+    title: { text: 'Same as Instagram', note: '500 max' },
+    desc:  { text: 'First 125 chars visible', note: '2200 max' },
+    tags:  { text: '5–15 sweet spot', note: 'max 30' },
+  },
+]
+
+const UNIVERSAL_TIPS = [
+  { icon: '🎬', tip: 'Hook in first 3 seconds — all platforms penalise early drop-off' },
+  { icon: '📝', tip: 'Front-load keywords in titles and captions' },
+  { icon: '🔤', tip: 'Burned-in captions increase watch time 30–40%' },
+  { icon: '📐', tip: '9:16 vertical (1080×1920) for all short-form platforms' },
+  { icon: '📣', tip: 'End with a call-to-action — "Follow for more" or "Listen to the full episode"' },
+]
+
+function BestPracticesPanel() {
+  return (
+    <div className="bp-panel">
+      <div className="bp-title">Platform Quick Reference</div>
+
+      <div className="bp-table-wrap">
+        <table className="bp-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Title / Caption</th>
+              <th>Description</th>
+              <th>Hashtags</th>
+            </tr>
+          </thead>
+          <tbody>
+            {BP_DATA.map(row => {
+              const p = allPlatforms.find(p => p.id === row.id)
+              return (
+                <tr key={row.id}>
+                  <td className="bp-platform-cell">
+                    <span className="bp-emoji">{p.emoji}</span>
+                    <span>{p.shortName}</span>
+                  </td>
+                  <td>
+                    <span className="bp-main">{row.title.text}</span>
+                    {row.title.note && <span className="bp-note"> · {row.title.note}</span>}
+                  </td>
+                  <td>
+                    <span className={row.desc.text === '—' ? 'bp-na' : 'bp-main'}>{row.desc.text}</span>
+                    {row.desc.note && <span className="bp-note"> · {row.desc.note}</span>}
+                  </td>
+                  <td>
+                    <span className={row.tags.text === 'Not supported' ? 'bp-na' : 'bp-main'}>{row.tags.text}</span>
+                    {row.tags.note && <span className="bp-note"> · {row.tags.note}</span>}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="bp-tips">
+        {UNIVERSAL_TIPS.map((t, i) => (
+          <div key={i} className="bp-tip-row">
+            <span className="bp-tip-icon">{t.icon}</span>
+            <span>{t.tip}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -389,6 +486,8 @@ export default function ContentPane({
               )}
             </div>
           )}
+
+          {!currentPlatform && <BestPracticesPanel />}
         </div>
 
         {/* Media */}
@@ -405,8 +504,9 @@ export default function ContentPane({
               {formData.videoFile ? (
                 <>
                   <video src={formData.videoFile._url} className="media-preview-video" />
-                  <div className="media-preview-name">{formData.videoFile.name}</div>
+                  <div className="media-preview-name" title={formData.videoFile.name}>{formData.videoFile.name}</div>
                   <div className="media-preview-meta">{formatBytes(formData.videoFile.size)}</div>
+                  <div className="media-replace-overlay">↑ Replace</div>
                 </>
               ) : (
                 <>
@@ -430,7 +530,8 @@ export default function ContentPane({
               {formData.thumbnailFile ? (
                 <>
                   <img src={formData.thumbnailFile._url} alt="Thumbnail" className="media-preview-img" />
-                  <div className="media-preview-name">{formData.thumbnailFile.name}</div>
+                  <div className="media-preview-name" title={formData.thumbnailFile.name}>{formData.thumbnailFile.name}</div>
+                  <div className="media-replace-overlay">↑ Replace</div>
                 </>
               ) : (
                 <>
