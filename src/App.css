@@ -114,6 +114,13 @@ body {
   box-shadow: 0 1px 6px rgba(229, 172, 57, 0.15);
 }
 
+/* Disabled (pre-populate) */
+.nav-platform:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 /* Completed platform */
 .nav-platform.nav-done {
   background: rgba(34, 197, 94, 0.12);
@@ -139,6 +146,89 @@ body {
   background: rgba(255,255,255,0.08);
   margin: 2px 2px;
 }
+.nav-divider--spaced { margin: 6px 2px; }
+
+/* ── Populate / Repopulate button ───────────────────────────── */
+.nav-populate-btn {
+  width: 100%;
+  padding: 11px 14px;
+  background: #E5AC39;
+  color: #333436;
+  border: none;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'Lexend', inherit;
+  cursor: pointer;
+  transition: background 0.13s, box-shadow 0.13s, opacity 0.13s;
+  letter-spacing: 0.01em;
+}
+.nav-populate-btn:hover:not(:disabled) {
+  background: #F0BB50;
+  box-shadow: 0 2px 12px rgba(229, 172, 57, 0.45);
+}
+.nav-populate-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+
+.nav-repopulate-btn {
+  background: rgba(229, 172, 57, 0.15);
+  color: #C89020;
+  border: 1.5px solid rgba(229, 172, 57, 0.3);
+}
+.nav-repopulate-btn:hover:not(:disabled) {
+  background: rgba(229, 172, 57, 0.25);
+  box-shadow: none;
+  color: #E5AC39;
+}
+
+/* Repopulate confirmation panel */
+.nav-repop-confirm {
+  background: rgba(229, 172, 57, 0.08);
+  border: 1.5px solid rgba(229, 172, 57, 0.25);
+  border-radius: 12px;
+  padding: 10px 12px 10px;
+}
+.nav-repop-confirm p {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #E0D4B0;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+.nav-repop-confirm p span {
+  font-weight: 400;
+  color: rgba(255,255,255,0.35);
+  font-size: 10.5px;
+}
+.nav-repop-btns {
+  display: flex;
+  gap: 5px;
+}
+.nav-repop-yes {
+  flex: 1;
+  padding: 6px 8px;
+  background: #E5AC39;
+  color: #333436;
+  border: none;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.nav-repop-yes:hover { background: #F0BB50; }
+.nav-repop-cancel {
+  padding: 6px 8px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: inherit;
+  color: rgba(255,255,255,0.35);
+  cursor: pointer;
+}
+.nav-repop-cancel:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.6); }
 
 .nav-spacer { flex: 1; min-height: 12px; }
 
@@ -692,6 +782,12 @@ body {
   display: flex;
   flex-direction: column;
   gap: 7px;
+}
+.media-card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 .media-card-label {
   font-size: 10.5px;

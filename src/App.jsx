@@ -3,8 +3,8 @@ import { platforms } from './data/platforms'
 import ContentPane from './components/ContentPane'
 import './App.css'
 
-const DRAFT_KEY    = 'mise-draft-v1'
-const PRESETS_KEY  = 'mise-presets-v1'
+const DRAFT_KEY   = 'mise-draft-v1'
+const PRESETS_KEY = 'mise-presets-v1'
 
 const INITIAL_FORM = {
   title: '',
@@ -17,44 +17,31 @@ const INITIAL_FORM = {
 }
 
 function loadDraft() {
-  try {
-    const raw = localStorage.getItem(DRAFT_KEY)
-    if (!raw) return null
-    return JSON.parse(raw) // { title, description, hashtags, platformHashtags, platformContent }
-  } catch { return null }
+  try { const r = localStorage.getItem(DRAFT_KEY); return r ? JSON.parse(r) : null } catch { return null }
 }
-
 function saveDraft(formData) {
-  const { videoFile, thumbnailFile, ...serialisable } = formData
-  localStorage.setItem(DRAFT_KEY, JSON.stringify(serialisable))
+  const { videoFile, thumbnailFile, ...s } = formData
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(s))
 }
-
 function loadPresets() {
   try { return JSON.parse(localStorage.getItem(PRESETS_KEY) || '[]') } catch { return [] }
 }
-
-function savePresets(presets) {
-  localStorage.setItem(PRESETS_KEY, JSON.stringify(presets))
-}
+function savePresets(p) { localStorage.setItem(PRESETS_KEY, JSON.stringify(p)) }
 
 export default function App() {
-  const [formData, setFormData]       = useState(() => {
-    const draft = loadDraft()
-    return draft ? { ...INITIAL_FORM, ...draft } : INITIAL_FORM
-  })
+  const [formData, setFormData]     = useState(() => { const d = loadDraft(); return d ? { ...INITIAL_FORM, ...d } : INITIAL_FORM })
   const [selectedPlatform, setSelectedPlatform] = useState(null)
-  const [isLocked, setIsLocked]       = useState(false)
+  const [isPopulated, setIsPopulated]   = useState(false)
+  const [repopConfirm, setRepopConfirm] = useState(false)
   const [completedPlatforms, setCompletedPlatforms] = useState({})
-  const [presets, setPresets]         = useState(loadPresets)
+  const [presets, setPresets]       = useState(loadPresets)
   const [clearConfirm, setClearConfirm] = useState(false)
   const [restoredDraft, setRestoredDraft] = useState(() => !!loadDraft())
 
-  // Auto-save draft on form change (text fields only — files can't be serialised)
-  useEffect(() => {
-    saveDraft(formData)
-  }, [formData])
+  // Auto-save text fields
+  useEffect(() => { saveDraft(formData) }, [formData])
 
-  // Dismiss the "restored" notice after 4 s
+  // Dismiss restored banner
   useEffect(() => {
     if (!restoredDraft) return
     const t = setTimeout(() => setRestoredDraft(false), 4000)
@@ -68,6 +55,13 @@ export default function App() {
     return () => clearTimeout(t)
   }, [clearConfirm])
 
+  // Repopulate-confirm timeout
+  useEffect(() => {
+    if (!repopConfirm) return
+    const t = setTimeout(() => setRepopConfirm(false), 5000)
+    return () => clearTimeout(t)
+  }, [repopConfirm])
+
   const handleSelectPlatform = useCallback((platformId) => {
     setSelectedPlatform(platformId)
     if (platformId && formData.platformHashtags[platformId] === undefined) {
@@ -80,23 +74,28 @@ export default function App() {
     }
   }, [formData.platformHashtags])
 
-  const handleLock = () => {
-    setIsLocked(true)
+  const handlePopulate = () => {
+    setIsPopulated(true)
+    setRepopConfirm(false)
     if (platforms.length > 0) handleSelectPlatform(platforms[0].id)
   }
 
-  const handleUnlock = () => {
-    setIsLocked(false)
-    setSelectedPlatform(null)
+  const handleRepopulate = () => {
+    // Reset per-platform overrides and re-seed
+    setFormData(prev => ({ ...prev, platformContent: {}, platformHashtags: {} }))
+    setCompletedPlatforms({})
+    setRepopConfirm(false)
+    if (platforms.length > 0) handleSelectPlatform(platforms[0].id)
   }
 
   const handleClear = () => {
     if (!clearConfirm) { setClearConfirm(true); return }
     setFormData(INITIAL_FORM)
     setCompletedPlatforms({})
-    setIsLocked(false)
+    setIsPopulated(false)
     setSelectedPlatform(null)
     setClearConfirm(false)
+    setRepopConfirm(false)
     localStorage.removeItem(DRAFT_KEY)
     setRestoredDraft(false)
   }
@@ -107,37 +106,18 @@ export default function App() {
 
   // ── Presets ──────────────────────────────────────────────────────
   const handleSavePreset = (name) => {
-    const preset = {
-      id: Date.now().toString(),
-      name,
-      title: formData.title,
-      description: formData.description,
-      hashtags: formData.hashtags,
-    }
-    const updated = [preset, ...presets].slice(0, 20) // max 20
-    setPresets(updated)
-    savePresets(updated)
+    const preset = { id: Date.now().toString(), name, title: formData.title, description: formData.description, hashtags: formData.hashtags }
+    const updated = [preset, ...presets].slice(0, 20)
+    setPresets(updated); savePresets(updated)
   }
-
   const handleLoadPreset = (preset) => {
-    setFormData(prev => ({
-      ...prev,
-      title: preset.title,
-      description: preset.description,
-      hashtags: preset.hashtags,
-    }))
+    setFormData(prev => ({ ...prev, title: preset.title, description: preset.description, hashtags: preset.hashtags }))
   }
-
   const handleDeletePreset = (id) => {
-    const updated = presets.filter(p => p.id !== id)
-    setPresets(updated)
-    savePresets(updated)
+    const updated = presets.filter(p => p.id !== id); setPresets(updated); savePresets(updated)
   }
 
-  const currentPlatform = selectedPlatform
-    ? platforms.find(p => p.id === selectedPlatform) ?? null
-    : null
-
+  const currentPlatform = selectedPlatform ? platforms.find(p => p.id === selectedPlatform) ?? null : null
   const hasContent = !!(formData.title?.trim() || formData.videoFile)
 
   return (
@@ -147,24 +127,49 @@ export default function App() {
           <span className="nav-logo-mise">MISE EN </span><span className="nav-logo-uploader">Uploader</span>
         </div>
 
-        {!isLocked && (
-          <>
-            <button
-              className={`nav-btn nav-all${!selectedPlatform ? ' nav-active' : ''}`}
-              onClick={() => handleSelectPlatform(null)}
-            >
-              ALL
-            </button>
-            <div className="nav-divider" />
-          </>
+        {/* ALL */}
+        <button
+          className={`nav-btn nav-all${!selectedPlatform ? ' nav-active' : ''}`}
+          onClick={() => handleSelectPlatform(null)}
+        >
+          ALL
+        </button>
+
+        {/* POPULATE / REPOPULATE */}
+        {!isPopulated ? (
+          <button
+            className="nav-populate-btn"
+            disabled={!hasContent}
+            onClick={handlePopulate}
+            title={!hasContent ? 'Add a title or video first' : 'Copy content to all platforms'}
+          >
+            ▼ Populate
+          </button>
+        ) : repopConfirm ? (
+          <div className="nav-repop-confirm">
+            <p>Repopulate from Original?<br /><span>Will revert any changes made to individual posts.</span></p>
+            <div className="nav-repop-btns">
+              <button className="nav-repop-yes" onClick={handleRepopulate}>Yes, repopulate</button>
+              <button className="nav-repop-cancel" onClick={() => setRepopConfirm(false)}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <button className="nav-populate-btn nav-repopulate-btn" onClick={() => setRepopConfirm(true)}>
+            ↺ Repopulate
+          </button>
         )}
 
+        <div className="nav-divider nav-divider--spaced" />
+
+        {/* Platforms — disabled until populated */}
         {platforms.map(p => (
           <button
             key={p.id}
             className={`nav-btn nav-platform${selectedPlatform === p.id ? ' nav-active' : ''}${completedPlatforms[p.id] ? ' nav-done' : ''}`}
             style={{ '--pc': p.color }}
+            disabled={!isPopulated}
             onClick={() => handleSelectPlatform(p.id)}
+            title={!isPopulated ? 'Click Populate to enable' : ''}
           >
             <span className="nav-emoji">{p.emoji}</span>
             <span className="nav-label">{p.shortName}</span>
@@ -174,27 +179,9 @@ export default function App() {
 
         <div className="nav-spacer" />
 
-        <div className="nav-lock-wrap">
-          {isLocked ? (
-            <button className="nav-lock-btn nav-unlock-btn" onClick={handleUnlock}>
-              🔓 Unlock
-            </button>
-          ) : (
-            <button
-              className="nav-lock-btn"
-              disabled={!hasContent}
-              onClick={handleLock}
-              title={!hasContent ? 'Add a title or video first' : ''}
-            >
-              🔒 Lock
-            </button>
-          )}
-        </div>
-
         <button
           className={`nav-clear-btn${clearConfirm ? ' nav-clear-btn--confirm' : ''}`}
           onClick={handleClear}
-          title="Clear all content and start over"
         >
           {clearConfirm ? '⚠ Confirm clear?' : '× Clear'}
         </button>
@@ -203,18 +190,12 @@ export default function App() {
       </nav>
 
       <main className="content-area">
-        {restoredDraft && (
-          <div className="draft-banner">
-            ↩ Restored from last session
-          </div>
-        )}
+        {restoredDraft && <div className="draft-banner">↩ Restored from last session</div>}
         <ContentPane
           formData={formData}
           onChange={setFormData}
           currentPlatform={currentPlatform}
-          isLocked={isLocked}
-          onLock={handleLock}
-          onUnlock={handleUnlock}
+          isPopulated={isPopulated}
           completedPlatforms={completedPlatforms}
           onPlatformComplete={handlePlatformComplete}
           presets={presets}

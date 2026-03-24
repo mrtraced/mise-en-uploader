@@ -224,7 +224,7 @@ function PresetBar({ presets, onSave, onLoad, onDelete }) {
 }
 
 export default function ContentPane({
-  formData, onChange, currentPlatform, isLocked,
+  formData, onChange, currentPlatform, isPopulated,
   completedPlatforms = {}, onPlatformComplete,
   presets = [], onSavePreset, onLoadPreset, onDeletePreset,
 }) {
@@ -291,21 +291,8 @@ export default function ContentPane({
     setTimeout(() => setCopiedField(f => f === field ? null : f), 2000)
   }
 
-  // ── POST-LOCK: no platform ──────────────────────────────────────
-  if (isLocked && !currentPlatform) {
-    return (
-      <div className="content-pane locked-pick">
-        <div className="locked-pick-inner">
-          <div className="locked-pick-icon">🔒</div>
-          <h2 className="locked-pick-title">Content locked</h2>
-          <p className="locked-pick-sub">Select a platform from the left to begin publishing.</p>
-        </div>
-      </div>
-    )
-  }
-
-  // ── POST-LOCK: platform selected ─────────────────────────────────
-  if (isLocked && currentPlatform) {
+  // ── PUBLISH VIEW: platform selected ─────────────────────────────
+  if (currentPlatform) {
     const p = currentPlatform
     const overrides = formData.platformContent?.[p.id] ?? {}
     const isCompleted = !!completedPlatforms[p.id]
@@ -431,7 +418,17 @@ export default function ContentPane({
           <div className="output-media">
             {p.fields.includes('video') && (
               <div className="media-card">
-                <div className="media-card-label">VIDEO</div>
+                <div className="media-card-header-row">
+                  <div className="media-card-label">{p.fieldLabels?.video || 'VIDEO'}</div>
+                  {formData.videoFile && (
+                    <button
+                      className={`btn-copy-sm${copiedField === 'video-name' ? ' btn-copy-sm--done' : ''}`}
+                      onClick={() => doCopy('video-name', formData.videoFile.name)}
+                    >
+                      {copiedField === 'video-name' ? '✓ Copied' : '⎘ Filename'}
+                    </button>
+                  )}
+                </div>
                 {formData.videoFile ? (
                   <>
                     <video src={formData.videoFile._url} controls className="output-video" />
@@ -444,7 +441,15 @@ export default function ContentPane({
             )}
             {p.fields.includes('thumbnail') && formData.thumbnailFile && (
               <div className="media-card">
-                <div className="media-card-label">THUMBNAIL</div>
+                <div className="media-card-header-row">
+                  <div className="media-card-label">{p.fieldLabels?.thumbnail || 'THUMBNAIL'}</div>
+                  <button
+                    className={`btn-copy-sm${copiedField === 'thumb-name' ? ' btn-copy-sm--done' : ''}`}
+                    onClick={() => doCopy('thumb-name', formData.thumbnailFile.name)}
+                  >
+                    {copiedField === 'thumb-name' ? '✓ Copied' : '⎘ Filename'}
+                  </button>
+                </div>
                 <img src={formData.thumbnailFile._url} alt="Thumbnail" className="output-thumb" />
               </div>
             )}
