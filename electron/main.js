@@ -17,21 +17,9 @@ function createWindow() {
     },
     // macOS native title bar — traffic lights sit inside the window chrome
     titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 14, y: 14 },
+    trafficLightPosition: { x: 14, y: 16 },
     backgroundColor: '#333436',
     show: false,
-  })
-
-  // Cross-origin isolation for SharedArrayBuffer (Whisper WASM)
-  // credentialless allows HuggingFace CDN resources while still enabling SAB
-  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        'Cross-Origin-Opener-Policy': ['same-origin'],
-        'Cross-Origin-Embedder-Policy': ['credentialless'],
-      },
-    })
   })
 
   if (isDev) {
@@ -43,7 +31,21 @@ function createWindow() {
   win.once('ready-to-show', () => win.show())
 }
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  // Must be registered BEFORE any window loads a URL so COOP/COEP headers
+  // arrive with the very first response (SharedArrayBuffer requires this)
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Cross-Origin-Opener-Policy': ['same-origin'],
+        'Cross-Origin-Embedder-Policy': ['credentialless'],
+      },
+    })
+  })
+
+  createWindow()
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()

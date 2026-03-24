@@ -189,12 +189,14 @@ export default function App() {
   const hasContent = !!(formData.title?.trim() || formData.videoFile)
 
   return (
-    <div className="app-shell">
-      <nav className="platform-nav">
-        <div className="nav-logo-area">
-          <img src="./logo.png" alt="Mise En Uploader" className="nav-logo-img" />
-        </div>
+    <div className="app-root">
+      {/* Top rail — window drag region, logo top-right */}
+      <div className="top-rail">
+        <img src="./logo.png" alt="Mise En Uploader" className="top-rail-logo" />
+      </div>
 
+      <div className="app-shell">
+        <nav className="platform-nav">
         {/* ALL */}
         <button
           className={`nav-btn nav-all${!selectedPlatform ? ' nav-active' : ''}`}
@@ -281,6 +283,7 @@ export default function App() {
         {formData.videoFile && (
           <WhisperPanel videoFile={formData.videoFile} />
         )}
+      </div>
       </div>
     </div>
   )
