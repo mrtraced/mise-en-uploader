@@ -1,6 +1,22 @@
-const { app, BrowserWindow, shell, ipcMain, session, dialog } = require('electron')
+const { app, BrowserWindow, shell, ipcMain, session, dialog, protocol, net } = require('electron')
 const fs = require('fs').promises
 const path = require('path')
+const { pathToFileURL } = require('url')
+
+// Must be called before app is ready — registers app:// as a secure standard
+// scheme so the renderer treats it like https:// (enables SharedArrayBuffer etc.)
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'app',
+    privileges: {
+      standard: true,
+      secure: true,
+      allowServiceWorkers: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+    },
+  },
+])
 
 const isDev = !app.isPackaged
 
@@ -25,24 +41,60 @@ function createWindow() {
   if (isDev) {
     win.loadURL('http://localhost:5173')
   } else {
-    win.loadFile(path.join(__dirname, '../dist/index.html'))
+    // Use app:// so the protocol handler can inject COOP/COEP headers.
+    // file:// responses cannot be intercepted for header injection in Electron.
+    win.loadURL('app://localhost/index.html')
   }
 
   win.once('ready-to-show', () => win.show())
 }
 
 app.whenReady().then(() => {
-  // Must be registered BEFORE any window loads a URL so COOP/COEP headers
-  // arrive with the very first response (SharedArrayBuffer requires this)
-  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        'Cross-Origin-Opener-Policy': ['same-origin'],
-        'Cross-Origin-Embedder-Policy': ['credentialless'],
-      },
+  if (isDev) {
+    // Dev: inject COOP/COEP into Vite dev-server responses
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Cross-Origin-Opener-Policy': ['same-origin'],
+          'Cross-Origin-Embedder-Policy': ['credentialless'],
+        },
+      })
     })
-  })
+  } else {
+    // Production: serve dist/ via app:// with COOP/COEP headers so
+    // SharedArrayBuffer is available (file:// can't carry these headers)
+    const distPath = path.join(__dirname, '../dist')
+    protocol.handle('app', async (request) => {
+      const { pathname } = new URL(request.url)
+      const filePath = path.join(distPath, pathname === '/' ? 'index.html' : pathname)
+
+      try {
+        const response = await net.fetch(pathToFileURL(filePath).toString())
+        const headers = Object.fromEntries(response.headers.entries())
+        return new Response(response.body, {
+          status: response.status,
+          headers: {
+            ...headers,
+            'Cross-Origin-Opener-Policy': 'same-origin',
+            'Cross-Origin-Embedder-Policy': 'credentialless',
+          },
+        })
+      } catch {
+        // SPA fallback — unknown paths serve index.html
+        const indexUrl = pathToFileURL(path.join(distPath, 'index.html')).toString()
+        const response = await net.fetch(indexUrl)
+        return new Response(response.body, {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/html',
+            'Cross-Origin-Opener-Policy': 'same-origin',
+            'Cross-Origin-Embedder-Policy': 'credentialless',
+          },
+        })
+      }
+    })
+  }
 
   createWindow()
 })
