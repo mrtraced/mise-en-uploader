@@ -32,13 +32,6 @@ export default function WhisperPanel({ videoFile }) {
   }
 
   const handleTranscribe = async () => {
-    // Guard: SharedArrayBuffer required for WASM multi-threading
-    if (typeof SharedArrayBuffer === 'undefined') {
-      setError('Missing cross-origin headers — restart the app and try again. (SharedArrayBuffer unavailable)')
-      setPhase('error')
-      return
-    }
-
     try {
       setPhase('extracting')
       setProgressText('Reading video file…')

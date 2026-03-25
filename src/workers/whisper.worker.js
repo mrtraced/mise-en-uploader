@@ -3,6 +3,10 @@ import { pipeline, env } from '@xenova/transformers'
 // Load models from Hugging Face Hub
 env.allowLocalModels = false
 
+// Disable WASM multi-threading — SharedArrayBuffer (and COOP/COEP headers) are
+// only required when numThreads > 1.  Single-threaded is slower but always works.
+env.backends.onnx.wasm.numThreads = 1
+
 let transcriber = null
 
 // Catch any unhandled promise rejections in the worker and surface them
