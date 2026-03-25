@@ -20,12 +20,60 @@ Instead of remembering each platform's limits and reformatting your content ever
 
 ## How to use it
 
-### 1. Install & run
+There are two ways to run Mise en Uploader: as a **desktop app** (recommended) or in a browser.
+
+---
+
+### Desktop app (recommended)
+
+The desktop app unlocks features the browser can't provide:
+- **Full file paths** — the app can read the actual path of any file you drop in, which is required for the Whisper transcription and for "Reveal in Finder"
+- **Whisper AI transcription** — generates SRT captions locally, no account needed
+- **No browser security restrictions** — drag & drop works with any file on your disk
+
+#### Prerequisites
+
+- [Node.js](https://nodejs.org) 18 or later
+
+#### Run in development mode
+
+```bash
+npm install
+npm run electron:dev
+```
+
+This starts the Vite dev server and opens the app in an Electron window. Hot-reload works as normal.
+
+#### Build a distributable app
+
+```bash
+npm install
+npm run electron:build
+```
+
+Output is written to `dist-electron/`:
+
+| Platform | Output |
+|---|---|
+| macOS (Apple Silicon) | `Mise En Uploader-<version>-arm64.dmg` |
+| macOS (Intel) | `Mise En Uploader-<version>.dmg` |
+| Windows | `Mise En Uploader Setup <version>.exe` |
+
+Open the `.dmg` (Mac) or run the `.exe` installer (Windows), then launch **Mise En Uploader** from your Applications folder or Start menu.
+
+> **macOS note:** On first launch macOS may show a security warning because the app isn't notarized. Right-click (or Control-click) the app and choose **Open** to bypass it once.
+
+---
+
+### Browser (limited)
+
 ```bash
 npm install
 npm run dev
 ```
 Then open [http://localhost:5173](http://localhost:5173) in your browser.
+
+> The browser version cannot read full file paths and Whisper transcription is unavailable.
 
 ### 2. Collect mode (📝)
 Fill in your video's:
